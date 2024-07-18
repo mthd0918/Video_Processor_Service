@@ -2,6 +2,17 @@ import socket
 import os
 from pathlib import Path
 
+"""""
+# todo
+## 目標: MP4ファイルをCLIを使ってアップロード
+### 要件
+- すべてのデータが送信されるまで、最大サイズとして 1400 バイトのパケットを使用
+- サーバーへ最初に送信される32バイト -> ファイルのバイト数を通知
+- 4GB(2^32)までのファイルに対応
+- サーバーは受け取ったファイルをmp4ファイルとして解釈、クライアントは送信するファイルがmp4ファイルかどうかチェック
+- レスポンスコードで応答、16バイトのメッセージ
+"""""
+
 class VideoCompressorServer:
     def __init__(self, server_address='0.0.0.0', server_port=9001):
         self.server_address = server_address
