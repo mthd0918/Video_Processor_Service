@@ -22,7 +22,7 @@ class VideoCompressorServer:
         self.socket.listen(1)
         print('Starting up on {} port {}'.format(server_address, server_port))
 
-        self.dpath = 'temp'
+        self.dpath = 'output/'
         if not os.path.exists(self.dpath):
             os.makedirs(self.dpath)
 
