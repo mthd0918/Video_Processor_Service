@@ -10,43 +10,43 @@ class VideoCompressorClient:
 
         print('connecting to {}'.format(server_address, server_port))
 
-    # ヘッダーの作成 引数: bit
     def protocol_header(self, filename_length, json_length, data_length):
         return filename_length.to_bytes(1, "big") + json_length.to_bytes(3,"big") + data_length.to_bytes(4,"big")
 
+    def check_file_size(self, file_path):
+        with open(file_path, 'rb') as f:
+            f.seek(0, os.SEEK_END)
+            filesize = f.tell()
+            f.seek(0, 0)
+        if filesize > pow(2, 32):
+            raise ValueError('File must be below 2GB')
+        return filesize
+
+    def send_header(self, filename, filesize):
+        filename_bits = filename.encode('utf-8')
+        header = self.protocol_header(len(filename_bits), 0, filesize)
+        self.socket.send(header)
+        self.socket.send(filename_bits)
+
+    def send_file_content(self, file_path):
+        with open(file_path, 'rb') as f:
+            while True:
+                data = f.read(4096)
+                if not data:
+                    break
+                print('Sending file data')
+                self.socket.send(data)
+
     def tcp_main(self):
-        # TCP通信開始
         try:
             self.socket.connect((self.server_address, self.server_port))
-        except socket.error as err:
-            print(err)
-            sys.exit(1)
-        
-        # ファイルの送信
-        try:
-            filepath = input("Enter file name: ")
-            # text_file.txt
-            with open(filepath, 'rb') as f:
-                # ファイルのサイズチェック
-                f.seek(0, os.SEEK_END)
-                filesize = f.tell()
-                f.seek(0,0)
-
-                if filesize > pow(2,32):
-                    raise Exception('File must be below 2GB')
-                
-                # ヘッダーの送信
-                filename = os.path.basename(f.name)
-                filename_bits = filename.encode('utf-8')
-                header = self.protocol_header(len(filename_bits), 0, filesize)
-                self.socket.send(header)
-
-                # 4096バイトずつファイルの中身を送信
-                data = f.read(4096)
-                while data:
-                    print('Sending file data')
-                    self.socket.send(data)
-                    data = f.read(4096)
+            
+            file_path = input("Enter file name: ")
+            filename = os.path.basename(file_path)
+            
+            filesize = self.check_file_size(file_path)
+            self.send_header(filename, filesize)
+            self.send_file_content(file_path)
 
         except FileNotFoundError as e:
             print(f"File error: {e}")

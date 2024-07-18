@@ -16,9 +16,8 @@ class VideoCompressorServer:
             os.makedirs(self.dpath)
 
         print(f"self.dpath: {self.dpath}")
-        
-    def header_protocol(self, connection):
-        # header情報の受け取り
+
+    def read_header(self, connection):
         print("***header****")
         header = connection.recv(8)
         filename_length = int.from_bytes(header[:1], "big")
@@ -31,8 +30,8 @@ class VideoCompressorServer:
         print(f"sream_rate: {stream_rate}")
         print("***header****")
         return filename_length, json_length, data_length, stream_rate
-    
-    def read_client_info(self, connection, filename_length, json_length, data_length):
+
+    def read_filename(self, connection, filename_length, json_length, data_length):
         print("***from client***")
         filename = connection.recv(filename_length).decode('utf-8')
         print(f"Filename: {filename}")
@@ -62,14 +61,14 @@ class VideoCompressorServer:
             print(f"***Writing file***")
 
     def tcp_main(self):
-        while data_length > 0:
+        while True:
             connection, client_address = self.socket.accept()
             try:
                 print('connection from', client_address)
 
                 try:
-                    filename_length, json_length, data_length, stream_rate = self.header_protocol(connection)
-                    filename = self.read_client_info(connection, filename_length, json_length, data_length)
+                    filename_length, json_length, data_length, stream_rate = self.read_header(connection)
+                    filename = self.read_filename(connection, filename_length, json_length, data_length)
                     self.handle_file_transfer(connection, filename, data_length, stream_rate)
                 except Exception as e:
                     print(f'Error during file transfer: {e}')
