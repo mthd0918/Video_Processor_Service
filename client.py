@@ -5,24 +5,24 @@ import sys
 
 MAX_STREAM_RATE = 1400
 
-def input_command():
-    command_map = {
-        1: 'Compress video',
-        2: 'Change video resolution',
-        3: 'Modify video aspect ratio',
-        4: 'Convert video to audio',
-        5: 'Create GIF and WEBM from specified time range',
-    }
+COMMAND_LIST = {
+    1: {'command': 'compress_video', 'discription': 'Compress video'},
+    2: {'command': 'resize_video', 'discription': 'Change video resolution'},
+    3: {'command': 'change_aspect_ratio', 'discription': 'Modify video aspect ratio'},
+    4: {'command': 'extract_audio', 'discription': 'Convert video to audio'},
+    5: {'command': 'create_gif', 'discription': 'Create GIF from specified time range'},
+}
 
+def input_command(command_list):
     print("************************")
-    for key, value in command_map.items():
-        print(f"{key}: {value}")
+    for num, data in command_list.items():
+        print(f"{num}: {data['discription']}")
     print("************************")
     
     while True:
-        command = int(input("Choose command:"))
-        if command in command_map:
-            return command
+        command_num = int(input("Choose command:"))
+        if command_num in command_list:
+            return command_list[command_num]['command']
         else:
             print("Invalid value, choose command 1~5\n")
 
@@ -51,11 +51,12 @@ def main():
         filename = os.path.basename(f.name)
         media_type = os.path.splitext(filename)[1]
 
-        command = input_command()
+        command = input_command(COMMAND_LIST)
 
         file_info = {
             'filename': filename,
-            'command': command
+            'command': command, # add: preset, width, height
+
         }
         json_data = json.dumps(file_info)
 
