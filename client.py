@@ -15,6 +15,7 @@ COMMAND_LIST = {
 
 def input_command(command_list):
     print("************************")
+    print("Enter a number...")
     for num, data in command_list.items():
         print(f"{num}: {data['discription']}")
     print("************************")
@@ -38,7 +39,7 @@ def main():
         sys.exit(1)
 
     # filepath = input("Enter upload filepath: ")
-    filepath = 'media/12041412_1920_1080_25fps.mp4'                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+    filepath = 'media/free-video1-sea-cafinet.mp4'                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
 
     with open(filepath, 'rb') as f:
         f.seek(0, os.SEEK_END)
@@ -48,14 +49,17 @@ def main():
         if filesize > pow(2,32):
             raise Exception('File must be below 4GB.')
 
-        filename = os.path.basename(f.name)
-        media_type = os.path.splitext(filename)[1]
+        full_filename = os.path.basename(f.name)
+        filename, media_type = os.path.splitext(full_filename)
+
+        print("filename:", filename)
+        print("media_type:", media_type)
 
         command = input_command(COMMAND_LIST)
 
         file_info = {
             'filename': filename,
-            'command': command, # add: preset, width, height
+            'command': command,
 
         }
         json_data = json.dumps(file_info)
@@ -64,22 +68,15 @@ def main():
         media_type_size = len(media_type).to_bytes(1, "big")
         payload_size = filesize.to_bytes(5, "big")
 
-        header = json_length + media_type_size + payload_size
-        
         json_data_bytes = json_data.encode('utf-8')
         media_type_bytes = media_type.encode('utf-8')
 
-        body = json_data_bytes + media_type_bytes
-
-        data = header + body
-
+        header = json_length + media_type_size + payload_size
+        data = header + json_data_bytes + media_type_bytes
         sock.send(data)
-
-        print(data)
 
         payload = f.read(MAX_STREAM_RATE)
         while payload:
-            # print("Sending...")
             sock.send(payload)
             payload = f.read(MAX_STREAM_RATE)
 

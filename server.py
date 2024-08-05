@@ -8,8 +8,8 @@ MAX_STREAM_RATE = 1400
 
 ffmpeg_command = {
     "compress_video": "ffmpeg -i {input} -c:v libx264 -crf 23 -preset medium -c:a aac -b:a 128k {output}",
-    "resize_video": "ffmpeg -i {input} -vf scale=1280:720 -c:a copy {output}",
-    "change_aspect_ratio": "ffmpeg -i {input} -aspect 16:9 -c:a copy {output}",
+    "resize_video": "ffmpeg -i {input} -vf scale=600:300 -c:a copy {output}",
+    "change_aspect_ratio": "ffmpeg -i {input} -aspect 8:4 -c:a copy {output}",
     "extract_audio": "ffmpeg -i {input} -vn -acodec libmp3lame {output}",
     "create_gif": "ffmpeg -i {input} -ss 00:00:10 -t 00:00:05 -vf \"fps=10,scale=320:-1:flags=lanczos\" {output}",
 }
@@ -33,7 +33,7 @@ def main():
     sock.bind((server_address, server_port))
     sock.listen(1)
 
-    dpath = 'uploaded_data/'
+    dpath = 'uploaded_file/'
     if not os.path.exists(dpath):
         os.makedirs(dpath)
 
@@ -47,41 +47,38 @@ def main():
         media_type_size = int.from_bytes(header[2:3], "big")
         payload_size = int.from_bytes(header[3:], "big")
 
-        print("json_length:", json_length)
-        print("media_type_size:", media_type_size)
-        print("payload_size:", payload_size)
+        # json_data, media_type, payloadの受信
+        data = connection.recv(json_length + media_type_size)
+        json_data = data[:json_length]
+        media_type = data[json_length:].decode('utf-8')
 
-        # jsonデータの受信
-        json_data = connection.recv(json_length)
         json_obj = json.loads(json_data.decode('utf-8'))
         filename = json_obj['filename']
         command = json_obj['command']
-        
-        print("command: ", command)
 
-        # media_typeの受信
-        media_type = connection.recv(media_type_size)
-
-        print("media_type: ",media_type)
-
-        with open(os.path.join(dpath, filename), 'wb+') as f:
+    
+        with open(os.path.join(dpath, filename + media_type), 'wb+') as f:
             while payload_size > 0:
                 payload = connection.recv(payload_size if payload_size <= MAX_STREAM_RATE else MAX_STREAM_RATE)
-                # print('recieved {} bytes'.format(len(payload)))
                 f.write(payload)
                 payload_size -= len(payload)
-                # print(payload_size)
 
-        input_filename = f"{filename}"
-        output_filename = "processed_" + input_filename
+        # ffmpegの処理
+        input_filename = f"{filename}{media_type}"
 
-        input_file = Path("uploaded_data") / input_filename
-        output_file = Path("processed_data") / output_filename
+        if command == 'extract_audio':
+            media_type = '.mp3'
+        elif command == 'create_gif':
+            media_type ='.gif'   
 
-        print(input_filename)
-        print(output_filename)
+        output_filename = f"processed_{filename}{media_type}"
+
+        input_file = Path("uploaded_file") / input_filename
+        output_file = Path("processed_file") / output_filename
 
         ffmpeg_process(command, input_file, output_file)
+
+    # アップロードされた動画の削除
 
 if __name__ == '__main__':
     main()
