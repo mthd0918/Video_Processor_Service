@@ -13,6 +13,14 @@ COMMAND_LIST = {
     5: {'command': 'create_gif', 'discription': 'Create GIF from specified time range'},
 }
 
+COMMAND_PARAMS = {
+    'compress_video': [],
+    'resize_video': ['width', 'height'],
+    'change_aspect_ratio': ['aspect_ratio'],
+    'extract_audio': [],
+    'create_gif': ['start_time', 'duration'],
+}
+
 def input_command(command_list):
     print("************************")
     print("Enter a number...")
@@ -26,6 +34,19 @@ def input_command(command_list):
             return command_list[command_num]['command']
         else:
             print("Invalid value, choose command 1~5\n")
+
+def get_command_params(command):
+    params = {}
+    for param in COMMAND_PARAMS[command]:
+        if param in ['width', 'height']:
+            params[param] = input(f"Enter {param} (pixels): ")
+        elif param == 'aspect_ratio':
+            params[param] = input("Enter aspect ratio (e.g., 16:9): ")
+        elif param == 'start_time':
+            params[param] = input("Enter start time (format: HH:MM:SS): ")
+        elif param == 'duration':
+            params[param] = input("Enter duration (seconds): ")
+    return params
 
 def main():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -56,11 +77,12 @@ def main():
         print("media_type:", media_type)
 
         command = input_command(COMMAND_LIST)
+        params = get_command_params(command)
 
         file_info = {
             'filename': filename,
             'command': command,
-
+            **params
         }
         json_data = json.dumps(file_info)
 

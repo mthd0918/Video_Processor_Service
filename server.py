@@ -6,19 +6,35 @@ from pathlib import Path
 
 MAX_STREAM_RATE = 1400
 
-ffmpeg_command = {
-    "compress_video": "ffmpeg -i {input} -c:v libx264 -crf 23 -preset medium -c:a aac -b:a 128k {output}",
-    "resize_video": "ffmpeg -i {input} -vf scale=600:300 -c:a copy {output}",
-    "change_aspect_ratio": "ffmpeg -i {input} -aspect 8:4 -c:a copy {output}",
-    "extract_audio": "ffmpeg -i {input} -vn -acodec libmp3lame {output}",
-    "create_gif": "ffmpeg -i {input} -ss 00:00:10 -t 00:00:05 -vf \"fps=10,scale=320:-1:flags=lanczos\" {output}",
+COMMAND_PARAMS = {
+    'compress_video': [],
+    'resize_video': ['width', 'height'],
+    'change_aspect_ratio': ['aspect_ratio'],
+    'extract_audio': [],
+    'create_gif': ['start_time', 'duration'],
 }
 
-def ffmpeg_process(command_key, input_file, output_file):
-    if command_key not in ffmpeg_command:
+ffmpeg_commands = {
+    "compress_video": "ffmpeg -i {input} -c:v libx264 -crf 23 {output}",
+    "resize_video": "ffmpeg -i {input} -vf scale={width}:{height} -c:a copy {output}",
+    "change_aspect_ratio": "ffmpeg -i {input} -aspect {aspect_ratio} -c:a copy {output}",
+    "extract_audio": "ffmpeg -i {input} -vn -acodec libmp3lame {output}",
+    "create_gif": "ffmpeg -i {input} -ss {start_time} -t {duration} -vf \"fps=10,scale=320:-1:flags=lanczos\" {output}",
+}
+
+def ffmpeg_process(command_key, input_file, output_file, params):
+    if command_key not in ffmpeg_commands:
         raise ValueError(f"Unknown command key: {command_key}")
     
-    execute_command = ffmpeg_command[command_key].format(input=input_file, output=output_file)
+    command = ffmpeg_commands[command_key]
+    format_params = {'input': input_file, 'output': output_file}
+
+    # 各コマンド特有のパラメーターを追加
+    for param in COMMAND_PARAMS[command_key]:
+        if param in params:
+            format_params[param] = params[param]
+    
+    execute_command = command.format(**format_params)
     
     try:
         subprocess.run(execute_command, shell=True, check=True)
@@ -56,14 +72,15 @@ def main():
         filename = json_obj['filename']
         command = json_obj['command']
 
-    
         with open(os.path.join(dpath, filename + media_type), 'wb+') as f:
             while payload_size > 0:
                 payload = connection.recv(payload_size if payload_size <= MAX_STREAM_RATE else MAX_STREAM_RATE)
                 f.write(payload)
                 payload_size -= len(payload)
 
+
         # ffmpegの処理
+        params = {key: json_obj.get(key) for key in COMMAND_PARAMS[command]}
         input_filename = f"{filename}{media_type}"
 
         if command == 'extract_audio':
@@ -76,9 +93,10 @@ def main():
         input_file = Path("uploaded_file") / input_filename
         output_file = Path("processed_file") / output_filename
 
-        ffmpeg_process(command, input_file, output_file)
+        ffmpeg_process(command, input_file, output_file, params)
 
-    # アップロードされた動画の削除
+        # アップロードされた動画の削除
+        os.remove(input_file)
 
 if __name__ == '__main__':
     main()
